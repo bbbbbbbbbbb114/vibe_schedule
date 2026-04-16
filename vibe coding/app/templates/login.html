@@ -12,7 +12,7 @@
             <p class="muted" style="margin-bottom: 2rem;">登录你的日程空间</p>
             <form id="login-form" class="form-grid">
                 <label>用户名</label>
-                <input type="text" id="username" placeholder="例如 alice" required />
+                <input type="text" id="username" maxlength="80" placeholder="例如 alice" required />
                 <label>密码</label>
                 <input type="password" id="password" placeholder="请输入密码" required />
                 <button class="btn btn-primary" type="submit" style="margin-top: 1rem;">进入</button>
@@ -28,6 +28,17 @@
 
 {% block scripts %}
 <script>
+    function showAuthError(message) {
+        const errorDiv = document.getElementById('auth-error') || document.createElement('div');
+        if (!errorDiv.id) {
+            errorDiv.id = 'auth-error';
+            errorDiv.style.cssText = 'background:#f8d7da;color:#721c24;padding:12px;border-radius:4px;margin-bottom:1rem;border:1px solid #f5c6cb;display:none;';
+            document.querySelector('.auth-card')?.insertBefore(errorDiv, document.getElementById('login-form'));
+        }
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+
     const form = document.getElementById('login-form');
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -44,7 +55,7 @@
         }
 
         const errData = await res.json();
-        alert(errData.error || '登录失败，请重试');
+        showAuthError(errData.error || '登录失败，请重试');
     });
 </script>
 {% endblock %}

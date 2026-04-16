@@ -50,6 +50,8 @@ def parse_reminder_offsets(raw: str) -> tuple[str, list[timedelta]]:
                 raise ValueError("invalid minute reminder offset") from exc
             if minutes < 0:
                 raise ValueError("reminder offset minutes must be non-negative")
+            if minutes > 43200:
+                raise ValueError("reminder offset minutes cannot exceed 30 days (43200 minutes)")
             valid_tokens.append(f"{minutes}m")
             deltas.append(timedelta(minutes=minutes))
             continue
@@ -61,6 +63,8 @@ def parse_reminder_offsets(raw: str) -> tuple[str, list[timedelta]]:
                 raise ValueError("invalid day reminder offset") from exc
             if days <= 0:
                 raise ValueError("reminder offset days must be positive")
+            if days > 30:
+                raise ValueError("reminder offset days cannot exceed 30 days")
             valid_tokens.append(f"{days}d")
             deltas.append(timedelta(days=days))
             continue
@@ -212,11 +216,17 @@ def resolve_create_time_fields(data: dict) -> tuple[str, datetime, datetime, dat
     if schedule_type not in {"point", "range"}:
         raise ValueError("schedule_type must be point or range")
 
+    now = utc_now_naive()
+    time_min = now - timedelta(days=180)
+    time_max = now + timedelta(days=3650)
+
     if schedule_type == "point":
         point_raw = str(data.get("due_at") or data.get("point_at") or "").strip()
         if not point_raw:
             raise ValueError("due_at is required for point schedule")
         point_at = parse_iso_datetime(point_raw, "due_at")
+        if point_at < time_min or point_at > time_max:
+            raise ValueError("schedule time must be within 6 months past and 10 years future")
         return "point", point_at, point_at, None
 
     start_raw = str(data.get("start_at") or "").strip()
@@ -228,6 +238,8 @@ def resolve_create_time_fields(data: dict) -> tuple[str, datetime, datetime, dat
     end_at = parse_iso_datetime(end_raw, "end_at")
     if end_at <= start_at:
         raise ValueError("end_at must be later than start_at")
+    if start_at < time_min or end_at > time_max:
+        raise ValueError("schedule time must be within 6 months past and 10 years future")
     return "range", start_at, start_at, end_at
 
 
@@ -236,6 +248,10 @@ def resolve_update_time_fields(item: Schedule, data: dict) -> tuple[str, datetim
     schedule_type = str(data.get("schedule_type") or current_type).strip().lower()
     if schedule_type not in {"point", "range"}:
         raise ValueError("schedule_type must be point or range")
+
+    now = utc_now_naive()
+    time_min = now - timedelta(days=180)
+    time_max = now + timedelta(days=3650)
 
     if schedule_type == "point":
         point_raw = data.get("due_at")
@@ -246,6 +262,8 @@ def resolve_update_time_fields(item: Schedule, data: dict) -> tuple[str, datetim
             if point_raw is not None
             else item.due_at
         )
+        if point_at and (point_at < time_min or point_at > time_max):
+            raise ValueError("schedule time must be within 6 months past and 10 years future")
         return "point", point_at, point_at, None
 
     start_raw = data.get("start_at")
@@ -264,6 +282,8 @@ def resolve_update_time_fields(item: Schedule, data: dict) -> tuple[str, datetim
         end_at = start_at + timedelta(minutes=30)
     if end_at <= start_at:
         raise ValueError("end_at must be later than start_at")
+    if start_at < time_min or end_at > time_max:
+        raise ValueError("schedule time must be within 6 months past and 10 years future")
     return "range", start_at, start_at, end_at
 
 
@@ -313,8 +333,14 @@ def register():
 
     if not username:
         return jsonify({"error": "请输入用户名"}), 400
+    if len(username) > 80:
+        return jsonify({"error": "用户名长度不能超过80个字符"}), 400
     if not password:
         return jsonify({"error": "请输入密码"}), 400
+    if len(password) < 6:
+        return jsonify({"error": "密码长度至少6个字符"}), 400
+    if len(password) > 128:
+        return jsonify({"error": "密码长度不能超过128个字符"}), 400
 
     from app.models import User, db
     
@@ -363,6 +389,10 @@ def create_schedule():
 
     if not title:
         return jsonify({"error": "title is required"}), 400
+    if len(title) > 120:
+        return jsonify({"error": "标题长度不能超过120个字符"}), 400
+    if len(description) > 10000:
+        return jsonify({"error": "描述长度不能超过10000个字符"}), 400
 
     try:
         schedule_type, due_at, start_at, end_at = resolve_create_time_fields(data)

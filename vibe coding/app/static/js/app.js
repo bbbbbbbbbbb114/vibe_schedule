@@ -47,6 +47,17 @@ function localNaiveNowISO() {
     return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
 }
 
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
 function showToast(message) {
     toast.textContent = message;
     toast.classList.remove('hidden');
@@ -115,7 +126,7 @@ function renderList(el, items) {
     }
     items.forEach((item) => {
         const li = document.createElement('li');
-        li.innerHTML = `<strong>${item.title}</strong><br><span>${new Date(item.due_at).toLocaleString()}</span>`;
+        li.innerHTML = `<strong>${escapeHtml(item.title)}</strong><br><span>${new Date(item.due_at).toLocaleString()}</span>`;
         el.appendChild(li);
     });
 }
@@ -135,9 +146,9 @@ function renderSchedules(items) {
 
         const li = document.createElement('li');
         li.className = item.is_done ? 'item done' : 'item';
-        const locationTag = item.location ? `<span class="badge badge-purple" style="margin-right:4px;">地点：${item.location}</span>` : '';
-        const repeatTag = item.repeat_type && item.repeat_type !== 'none' ? `<span class="badge badge-yellow" style="margin-right:4px;">重复：${item.repeat_type}</span>` : '';
-        const reminderTag = item.reminder_offsets ? `<span class="badge badge-orange" style="margin-right:4px;">提醒：${item.reminder_offsets}(${item.reminder_phase || 'start'})</span>` : '';
+        const locationTag = item.location ? `<span class="badge badge-purple" style="margin-right:4px;">地点：${escapeHtml(item.location)}</span>` : '';
+        const repeatTag = item.repeat_type && item.repeat_type !== 'none' ? `<span class="badge badge-yellow" style="margin-right:4px;">重复：${escapeHtml(item.repeat_type)}</span>` : '';
+        const reminderTag = item.reminder_offsets ? `<span class="badge badge-orange" style="margin-right:4px;">提醒：${escapeHtml(item.reminder_offsets)}(${escapeHtml(item.reminder_phase || 'start')})</span>` : '';
 
         let timeAttrs = '';
         if (scheduleType === 'range') {
@@ -150,11 +161,11 @@ function renderSchedules(items) {
             <div class="item-main" data-id="${item.id}">
                 <label class="check-row">
                     <input type="checkbox" data-action="toggle" data-id="${item.id}" ${item.is_done ? 'checked' : ''} />
-                    <strong>${item.title}</strong>
+                    <strong>${escapeHtml(item.title)}</strong>
                 </label>
                 <div class="meta" ${timeAttrs}>${timeText} <span class="countdown"></span></div>
                 <div class="meta">${locationTag}${repeatTag}${reminderTag}</div>
-                <div class="meta">${item.description || '无描述'}</div>
+                <div class="meta">${escapeHtml(item.description || '无描述')}</div>
             </div>
             <div class="item-actions">
                 <button class="btn btn-mini" data-action="edit" data-id="${item.id}">编辑</button>
@@ -370,8 +381,8 @@ function renderCalendar(items) {
                     ? `${info.event.start?.toLocaleString()} - ${info.event.end?.toLocaleString()}`
                     : `${info.event.start?.toLocaleString()}（时间点）`;
 
-                const locationHtml = location ? `<br><strong>地点：</strong>${location}` : '';
-                const descHtml = desc ? `<br><strong>描述：</strong>${desc}` : '';
+                const locationHtml = location ? `<br><strong>地点：</strong>${escapeHtml(location)}` : '';
+                const descHtml = desc ? `<br><strong>描述：</strong>${escapeHtml(desc)}` : '';
 
                 const overlay = document.getElementById('event-detail-overlay');
                 document.getElementById('event-detail-title').textContent = title;
@@ -479,7 +490,7 @@ function renderUpcoming(items) {
         li.innerHTML = `
             <div style="flex: 1; display:flex; flex-direction:column; gap:4px;">
                 <div style="display:flex; justify-content:space-between;">
-                    <strong style="color: var(--text-primary);">${occ.item.title}</strong>
+                    <strong style="color: var(--text-primary);">${escapeHtml(occ.item.title)}</strong>
                     <span class="${urgencyClass}" style="font-size:12px;">${urgencyText}</span>
                 </div>
                 <div style="font-size:13px; color:var(--text-secondary);">

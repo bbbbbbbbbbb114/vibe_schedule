@@ -12,7 +12,7 @@
             <p class="muted" style="margin-bottom: 2rem;">创建一个新的日程空间账号</p>
             <form id="register-form" class="form-grid">
                 <label>用户名</label>
-                <input type="text" id="username" placeholder="例如 alice" required />
+                <input type="text" id="username" maxlength="80" placeholder="例如 alice" required />
                 <label>设定密码</label>
                 <input type="password" id="password" placeholder="请输入至少6位密码" required minlength="6" />
                 <label>确认密码</label>
@@ -29,6 +29,17 @@
 
 {% block scripts %}
 <script>
+    function showAuthError(message) {
+        const errorDiv = document.getElementById('auth-error') || document.createElement('div');
+        if (!errorDiv.id) {
+            errorDiv.id = 'auth-error';
+            errorDiv.style.cssText = 'background:#f8d7da;color:#721c24;padding:12px;border-radius:4px;margin-bottom:1rem;border:1px solid #f5c6cb;display:none;';
+            document.querySelector('.auth-card')?.insertBefore(errorDiv, document.getElementById('register-form'));
+        }
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+
     const form = document.getElementById('register-form');
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -37,7 +48,7 @@
         const confirmPassword = document.getElementById('confirm-password').value.trim();
 
         if (password !== confirmPassword) {
-            alert('两次输入的密码不一致，请重新输入');
+            showAuthError('两次输入的密码不一致，请重新输入');
             return;
         }
 
@@ -52,7 +63,7 @@
         }
 
         const errData = await res.json();
-        alert(errData.error || '注册失败，请重试');
+        showAuthError(errData.error || '注册失败，请重试');
     });
 </script>
 {% endblock %}

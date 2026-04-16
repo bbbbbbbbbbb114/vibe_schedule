@@ -21,6 +21,9 @@ def ensure_user_schema() -> None:
     if missing_usernames:
         default_hash = generate_password_hash("123456")
         for uname in missing_usernames:
+            # 检查是否已经存在，避免重复插入
+            if User.query.filter_by(username=uname).first():
+                continue
             db.session.execute(
                 text("INSERT INTO users (username, password_hash, created_at) VALUES (:u, :p, CURRENT_TIMESTAMP)"),
                 {"u": uname, "p": default_hash}
